@@ -4,7 +4,19 @@ Description: >
   Cloudformation template for AWS Glue resource and integration with other AWS
   resources like Athena, S3 and RDS.
 
-Resouces:
+Parameters:
+# The name of the crawler to be created
+  CrawlerName:
+    Type: String
+    Description: A crawler name.
+  CrawlerDatabaseName:
+    Type: String
+    Description: Container for crawler metadata tables.
+  TablePrefixName:
+    Type: String
+    Description: Table prefix name.
+
+Resources:
   AWSGlueServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -89,3 +101,28 @@ Resouces:
                   ForAllValues:StringEquals:
                     aws:TagKeys:
                       - "aws-glue-service-resource"
+
+  CrawlerDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: !Ref CrawlerDatabaseName
+        Description: "AWS Glue container to hold metadata tables for the crawler"
+  Crawler:
+    Type: AWS::Glue::Crawler
+    Properties:
+      Name: !Ref CrawlerName
+      Role: !GetAtt AWSGlueServiceRole.Arn
+      #Classifiers: none, use the default classifier
+      Description: AWS Glue crawler to crawl data
+      #Schedule: none, use default run-on-demand
+      DatabaseName: !Ref CrawlerDatabaseName
+      Targets:
+        S3Targets:
+          # Public S3 bucket with the data
+          - Path: "s3://tbd"
+      TablePrefix: !Ref TablePrefixName
+      SchemaChangePolicy:
+        UpdateBehavior: "UPDATE_IN_DATABASE"
+        DeleteBehavior: "LOG"
