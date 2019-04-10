@@ -15,6 +15,19 @@ Parameters:
   TablePrefixName:
     Type: String
     Description: Table prefix name.
+  JDBCConnectionName:
+    Type: String
+    Description: cfn-connection-mysql-flights-1
+  JDBCString:
+    Type: String
+    Description: "JDBC connection string."
+  JDBCUser:
+    Type: String
+    Description: "JDBC user name."
+  JDBCPassword:
+    Type: String
+    Description: "JDBC password."
+    NoEcho: true
 
 Resources:
   AWSGlueServiceRole:
@@ -101,6 +114,25 @@ Resources:
                   ForAllValues:StringEquals:
                     aws:TagKeys:
                       - "aws-glue-service-resource"
+  ConnectionMySQL:
+    Type: AWS::Glue::Connection
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      ConnectionInput:
+        Description: "Connect to MySQL database."
+        ConnectionType: "JDBC"
+        #MatchCriteria: none
+        PhysicalConnectionRequirements:
+          AvailabilityZone: "tbd"
+          SecurityGroupIdList:
+           - "tbd"
+          SubnetId: "tbd"
+        ConnectionProperties: {
+          "JDBC_CONNECTION_URL": !Ref JDBCString,
+          "USERNAME": !Ref JDBCUser,
+          "PASSWORD": !Ref JDBCPassword
+        }
+        Name: !Ref ConnectionName
 
   CrawlerDatabase:
     Type: AWS::Glue::Database
