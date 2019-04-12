@@ -19,7 +19,6 @@ Parameters:
     MinLength: 4
     NoEcho: false
     Type: String
-
   AuroraDBPassword:
     AllowedPattern: [a-zA-Z0-9]*
     ConstraintDescription: "Must contain only alphanumeric characters with minimum of 8 characters."
@@ -29,6 +28,13 @@ Parameters:
     MinLength: 8
     NoEcho: true
     Type: String
+  AuroraDBInstanceType:
+    AllowedValues:
+      - db.t2.small
+      - db.t2.medium
+    Default: db.t2.small
+    Description: Choose the DB instance class that allocates the computational, network, and memory capacity
+    Type: String
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -37,11 +43,14 @@ Metadata:
           default: Database Configuration
         Parameters:
           - AuroraClusterName
+          - AuroraDBInstanceType
           - AuroraDBUsername
           - DatabasePassword
     ParameterLabels:
       AuroraClusterName:
         default: Database Cluster Name
+      AuroraDBInstanceType:
+        dafault: Database Instance Type
       AuroraDBUsername:
         default: Database Username
       AuroraDBPassword:
@@ -167,7 +176,7 @@ Resources:
       DBSecurityGroups:
         - Ref: RDSSecurityGroup
       AllocatedStorage: '5'
-      DBInstanceClass: db.m1.small
+      DBInstanceClass: !Ref AuroraDBInstanceType
       PubliclyAccessible: false
       Engine: aurora
       MasterUsername: !Ref AuroraDBUsername
