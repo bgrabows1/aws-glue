@@ -1,0 +1,175 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Cloudformation template for AWS RDS Aurora database.
+
+Parameters:
+  AuroraClusterName:
+    Description: Aurora cluster name.
+    MaxLength: 16
+    MinLength: 3
+    NoEcho: false
+    Type: String
+  AuroraDBUsername:
+    AllowedPattern: [a-zA-Z][a-zA-Z0-9]*
+    ConstraintDescription: "Must begin with a letter and contain a minimum of 4 alphanumeric characters."
+    Default: auradmin
+    Description: Enter database Admin username for Aurora.
+    MaxLength: 16
+    MinLength: 4
+    NoEcho: false
+    Type: String
+
+  AuroraDBPassword:
+    AllowedPattern: [a-zA-Z0-9]*
+    ConstraintDescription: "Must contain only alphanumeric characters with minimum of 8 characters."
+    Default: auradmin123
+    Description: Enter password for Aurora Admin user.
+    MaxLength: 41
+    MinLength: 8
+    NoEcho: true
+    Type: String
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Database Configuration
+        Parameters:
+          - AuroraClusterName
+          - AuroraDBUsername
+          - DatabasePassword
+    ParameterLabels:
+      AuroraClusterName:
+        default: Database Cluster Name
+      AuroraDBUsername:
+        default: Database Username
+      AuroraDBPassword:
+        default: Database Password
+Mappings:
+  SubnetConfig:
+    VPC:
+      CIDR: 172.24.0.0/16
+    Private:
+      CIDR: 172.24.0.0/24
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Condition: CreateVPC
+    Properties:
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      CidrBlock:
+        Fn::FindInMap:
+        - SubnetConfig
+        - VPC
+        - CIDR
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref AuroraClusterName, "vpc"]]
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Condition: CreateVPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      CidrBlock:
+        Fn::FindInMap:
+        - SubnetConfig
+        - Private
+        - CIDR
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref AuroraClusterName, "private"]]
+      - Key: Network
+        Value: Private
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Condition: CreateVPC
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref AuroraClusterName, "ig"]]
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Condition: CreateVPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      InternetGatewayId:
+        Ref: InternetGateway
+  NATEIP:
+    Type: AWS::EC2::EIP
+    Condition: CreateVPC
+    Properties:
+      Domain: vpc
+  NATGateway:
+    #DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::NatGateway
+    Condition: CreateVPC
+    Properties:
+      AllocationId:
+        Fn::GetAtt:
+        - NATEIP
+        - AllocationId
+      SubnetId:
+        Ref: PublicSubnet
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateVPC
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref AuroraClusterName, "internal"]]
+  PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateVPC
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet
+      RouteTableId:
+        Ref: PrivateRouteTable
+  NATRoute:
+    Type: AWS::EC2::Route
+    Condition: CreateVPC
+    Properties:
+      RouteTableId:
+        Ref: PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId:
+        Ref: NATGateway
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: CloudFormation managed DB subnet group.
+      SubnetIds:
+        - Ref: PrivateSubnet
+  AuroraCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      DBClusterParameterGroupName: default.aurora-mysql5.7
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      Engine: aurora
+      MasterUserPassword: !Ref AuroraDBPassword
+      MasterUsername: !Ref AuroraDBUsername
+      Tags:
+        - Key: Application
+          Value: Ref! AWS::StackId
+      VpcSecurityGroupIds: !Ref myVPCSecurityGroup
+  AuroraInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBParameterGroupName: default.aurora-mysql5.7
+      DBClusterIdentifier: !Ref AuroraCluster
+      DBSecurityGroups:
+        - Ref: RDSSecurityGroup
+      AllocatedStorage: '5'
+      DBInstanceClass: db.m1.small
+      PubliclyAccessible: false
+      Engine: aurora
+      MasterUsername: !Ref AuroraDBUsername
+      MasterUserPassword: !Ref AuroraDBPassword
+    DeletionPolicy: Snapshot

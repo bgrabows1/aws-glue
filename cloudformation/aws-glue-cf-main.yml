@@ -114,6 +114,7 @@ Resources:
                   ForAllValues:StringEquals:
                     aws:TagKeys:
                       - "aws-glue-service-resource"
+
   ConnectionMySQL:
     Type: AWS::Glue::Connection
     Properties:
@@ -132,7 +133,7 @@ Resources:
           "USERNAME": !Ref JDBCUser,
           "PASSWORD": !Ref JDBCPassword
         }
-        Name: !Ref ConnectionName
+        Name: !Ref JDBCConnectionName
 
   CrawlerDatabase:
     Type: AWS::Glue::Database
