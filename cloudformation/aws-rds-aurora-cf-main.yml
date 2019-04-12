@@ -11,7 +11,7 @@ Parameters:
     NoEcho: false
     Type: String
   AuroraDBUsername:
-    AllowedPattern: [a-zA-Z][a-zA-Z0-9]*
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
     ConstraintDescription: "Must begin with a letter and contain a minimum of 4 alphanumeric characters."
     Default: auradmin
     Description: Enter database Admin username for Aurora.
@@ -20,7 +20,7 @@ Parameters:
     NoEcho: false
     Type: String
   AuroraDBPassword:
-    AllowedPattern: [a-zA-Z0-9]*
+    AllowedPattern: "[a-zA-Z0-9]*"
     ConstraintDescription: "Must contain only alphanumeric characters with minimum of 8 characters."
     Default: auradmin123
     Description: Enter password for Aurora Admin user.
@@ -65,7 +65,6 @@ Mappings:
 Resources:
   VPC:
     Type: AWS::EC2::VPC
-    Condition: CreateVPC
     Properties:
       EnableDnsSupport: 'true'
       EnableDnsHostnames: 'true'
@@ -79,7 +78,6 @@ Resources:
         Value: !Join ["-", [!Ref AuroraClusterName, "vpc"]]
   PrivateSubnet:
     Type: AWS::EC2::Subnet
-    Condition: CreateVPC
     Properties:
       VpcId:
         Ref: VPC
@@ -93,63 +91,25 @@ Resources:
         Value: !Join ["-", [!Ref AuroraClusterName, "private"]]
       - Key: Network
         Value: Private
-  InternetGateway:
-    Type: AWS::EC2::InternetGateway
-    Condition: CreateVPC
+  AuroraSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
     Properties:
-      Tags:
-      - Key: Name
-        Value: !Join ["-", [!Ref AuroraClusterName, "ig"]]
-  VPCGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Condition: CreateVPC
-    Properties:
+      GroupDescription: "Aurora security group."
       VpcId:
         Ref: VPC
-      InternetGatewayId:
-        Ref: InternetGateway
-  NATEIP:
-    Type: AWS::EC2::EIP
-    Condition: CreateVPC
+  AuroraSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: AuroraSecurityGroup
     Properties:
-      Domain: vpc
-  NATGateway:
-    #DependsOn: VPCGatewayAttachment
-    Type: AWS::EC2::NatGateway
-    Condition: CreateVPC
-    Properties:
-      AllocationId:
-        Fn::GetAtt:
-        - NATEIP
-        - AllocationId
-      SubnetId:
-        Ref: PublicSubnet
-  PrivateRouteTable:
-    Type: AWS::EC2::RouteTable
-    Condition: CreateVPC
-    Properties:
-      VpcId:
-        Ref: VPC
-      Tags:
-      - Key: Name
-        Value: !Join ["-", [!Ref AuroraClusterName, "internal"]]
-  PrivateSubnetRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Condition: CreateVPC
-    Properties:
-      SubnetId:
-        Ref: PrivateSubnet
-      RouteTableId:
-        Ref: PrivateRouteTable
-  NATRoute:
-    Type: AWS::EC2::Route
-    Condition: CreateVPC
-    Properties:
-      RouteTableId:
-        Ref: PrivateRouteTable
-      DestinationCidrBlock: 0.0.0.0/0
-      NatGatewayId:
-        Ref: NATGateway
+      GroupId: !Ref AuroraSecurityGroup
+      IpProtocol: tcp
+      FromPort: "3306"
+      ToPort: "3306"
+      CidrIp:
+        Fn::FindInMap:
+        - SubnetConfig
+        - VPC
+        - CIDR
   DatabaseSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
@@ -167,14 +127,14 @@ Resources:
       Tags:
         - Key: Application
           Value: Ref! AWS::StackId
-      VpcSecurityGroupIds: !Ref myVPCSecurityGroup
+      VpcSecurityGroupIds: !Ref AuroraSecurityGroup
   AuroraInstance:
     Type: AWS::RDS::DBInstance
     Properties:
       DBParameterGroupName: default.aurora-mysql5.7
       DBClusterIdentifier: !Ref AuroraCluster
       DBSecurityGroups:
-        - Ref: RDSSecurityGroup
+        - Ref: AuroraSecurityGroup
       AllocatedStorage: '5'
       DBInstanceClass: !Ref AuroraDBInstanceType
       PubliclyAccessible: false
