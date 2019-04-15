@@ -147,7 +147,7 @@ Resources:
     Properties:
       Parameters:
         character_set_database: "utf32"
-      Family: "aurora-mysql5.7"
+      Family: "aurora-mysql5.6"
       Description: "A parameter group for aurora db."
   AuroraCluster:
     Type: AWS::RDS::DBCluster
