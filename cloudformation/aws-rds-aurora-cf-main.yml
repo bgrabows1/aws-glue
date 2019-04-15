@@ -142,22 +142,29 @@ Resources:
       SubnetIds:
         - Ref: PrivateSubnet1
         - Ref: PrivateSubnet2
+  RDSDBClusterParameterGroup:
+    Type: "AWS::RDS::DBClusterParameterGroup"
+    Properties:
+      Parameters:
+        character_set_database: "utf32"
+      Family: "aurora-mysql5.7"
+      Description: "A parameter group for aurora db."
   AuroraCluster:
     Type: AWS::RDS::DBCluster
     Properties:
-      DBClusterParameterGroupName: default.aurora-mysql5.7
+      DBClusterParameterGroupName: !Ref RDSDBClusterParameterGroup
       DBSubnetGroupName: !Ref DatabaseSubnetGroup
       Engine: aurora
       MasterUserPassword: !Ref AuroraDBPassword
       MasterUsername: !Ref AuroraDBUsername
       Tags:
         - Key: Application
-          Value: Ref! AWS::StackId
-      VpcSecurityGroupIds: !Ref AuroraSecurityGroup
+          Value: !Ref AWS::StackId
+      VpcSecurityGroupIds:
+        - Ref: AuroraSecurityGroup
   AuroraInstance:
     Type: AWS::RDS::DBInstance
     Properties:
-      DBParameterGroupName: default.aurora-mysql5.7
       DBClusterIdentifier: !Ref AuroraCluster
       DBSecurityGroups:
         - Ref: AuroraSecurityGroup
