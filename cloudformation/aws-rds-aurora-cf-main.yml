@@ -59,8 +59,10 @@ Mappings:
   SubnetConfig:
     VPC:
       CIDR: 172.24.0.0/16
-    Private:
+    Private1:
       CIDR: 172.24.0.0/24
+    Private2:
+      CIDR: 172.24.1.0/24
 
 Resources:
   VPC:
@@ -76,7 +78,7 @@ Resources:
       Tags:
       - Key: Name
         Value: !Join ["-", [!Ref AuroraClusterName, "vpc"]]
-  PrivateSubnet:
+  PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
@@ -84,13 +86,36 @@ Resources:
       CidrBlock:
         Fn::FindInMap:
         - SubnetConfig
-        - Private
+        - Private1
         - CIDR
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
       Tags:
       - Key: Name
-        Value: !Join ["-", [!Ref AuroraClusterName, "private"]]
+        Value: !Join ["-", [!Ref AuroraClusterName, "private-subnet-1"]]
       - Key: Network
-        Value: Private
+        Value: Private1
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      CidrBlock:
+        Fn::FindInMap:
+        - SubnetConfig
+        - Private2
+        - CIDR
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref AuroraClusterName, "private-subnet-2"]]
+      - Key: Network
+        Value: Private2
   AuroraSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -115,7 +140,8 @@ Resources:
     Properties:
       DBSubnetGroupDescription: CloudFormation managed DB subnet group.
       SubnetIds:
-        - Ref: PrivateSubnet
+        - Ref: PrivateSubnet1
+        - Ref: PrivateSubnet2
   AuroraCluster:
     Type: AWS::RDS::DBCluster
     Properties:
