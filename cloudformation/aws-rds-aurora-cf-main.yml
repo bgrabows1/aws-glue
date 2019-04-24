@@ -187,3 +187,21 @@ Outputs:
     Value: !Ref VPC
     Export:
       Name: !Sub "${AWS::StackName}-Aurora-VPCID"
+
+  PrivateSubnet1:
+    Description: Aurora private subnet
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub "${AWS::StackName}-Aurora-Private-Subnet-1"
+
+  PrivateSubnet2:
+    Description: Aurora private subnet
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub "${AWS::StackName}-Aurora-Private-Subnet-2"
+
+  AuroraSecurityGroup:
+    Description: Aurora security group
+    Value: !Ref AuroraSecurityGroup
+    Export:
+      Name: !Sub "${AWS::StackName}-Aurora-Security-Group"

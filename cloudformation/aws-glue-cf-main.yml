@@ -6,6 +6,9 @@ Description: >
 
 Parameters:
 # The name of the crawler to be created
+  AuroraStack:
+    Type: String
+    Description: Aurora stack name.
   CrawlerName:
     Type: String
     Description: A crawler name.
@@ -124,10 +127,20 @@ Resources:
         ConnectionType: "JDBC"
         #MatchCriteria: none
         PhysicalConnectionRequirements:
-          AvailabilityZone: "tbd"
+          AvailabilityZone:
+            Fn::Select:
+              - 0
+              - Fn::GetAZs: ""
           SecurityGroupIdList:
-           - "tbd"
-          SubnetId: "tbd"
+           -
+             Fn::ImportValue:
+               Fn::Sub: "${AuroraStack}-Aurora-Private-Subnet-1"
+           -
+             Fn::ImportValue:
+               Fn::Sub: "${AuroraStack}-Aurora-Private-Subnet-2"
+          SubnetId:
+            Fn::ImportValue:
+              Fn::Sub: "${AuroraStack}-Aurora-Security-Group"
         ConnectionProperties: {
           "JDBC_CONNECTION_URL": !Ref JDBCString,
           "USERNAME": !Ref JDBCUser,
@@ -142,6 +155,26 @@ Resources:
       DatabaseInput:
         Name: !Ref CrawlerDatabaseName
         Description: "AWS Glue container to hold metadata tables for the crawler"
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - 's3:GetObject'
+            Resource:
+              - 'arn:aws:s3:::bg-glue/*'
+      ServiceName: !Join
+        - ''
+        - - com.amazonaws.
+          - !Ref 'AWS::Region'
+          - .s3
+      VpcId:
+        Fn::ImportValue:
+          Fn::Sub: "${AuroraStack}-Aurora-VPCID"
   Crawler:
     Type: AWS::Glue::Crawler
     Properties:
