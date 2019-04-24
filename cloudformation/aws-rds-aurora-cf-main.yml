@@ -4,12 +4,14 @@ Description: >
   Cloudformation template for AWS RDS Aurora database.
 
 Parameters:
-  AuroraClusterName:
-    Description: Aurora cluster name.
-    MaxLength: 16
-    MinLength: 3
+  AuroraDBName:
+    Description: Aurora database name.
+    MaxLength: 64
+    MinLength: 1
     NoEcho: false
     Type: String
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
   AuroraDBUsername:
     AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
     ConstraintDescription: "Must begin with a letter and contain a minimum of 4 alphanumeric characters."
@@ -42,12 +44,12 @@ Metadata:
       - Label:
           default: Database Configuration
         Parameters:
-          - AuroraClusterName
+          - AuroraDBName
           - AuroraDBInstanceType
           - AuroraDBUsername
           - DatabasePassword
     ParameterLabels:
-      AuroraClusterName:
+      AuroraDBName:
         default: Database Cluster Name
       AuroraDBInstanceType:
         dafault: Database Instance Type
@@ -77,7 +79,7 @@ Resources:
         - CIDR
       Tags:
       - Key: Name
-        Value: !Join ["-", [!Ref AuroraClusterName, "vpc"]]
+        Value: !Join ["-", [!Ref AuroraDBName, "vpc"]]
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
@@ -94,7 +96,7 @@ Resources:
           - Fn::GetAZs: ""
       Tags:
       - Key: Name
-        Value: !Join ["-", [!Ref AuroraClusterName, "private-subnet-1"]]
+        Value: !Join ["-", [!Ref AuroraDBName, "private-subnet-1"]]
       - Key: Network
         Value: Private1
   PrivateSubnet2:
@@ -113,7 +115,7 @@ Resources:
           - Fn::GetAZs: ""
       Tags:
       - Key: Name
-        Value: !Join ["-", [!Ref AuroraClusterName, "private-subnet-2"]]
+        Value: !Join ["-", [!Ref AuroraDBName, "private-subnet-2"]]
       - Key: Network
         Value: Private2
   AuroraSecurityGroup:
@@ -152,6 +154,7 @@ Resources:
   AuroraCluster:
     Type: AWS::RDS::DBCluster
     Properties:
+      DatabaseName: !Ref AuroraDBName
       DBClusterParameterGroupName: !Ref RDSDBClusterParameterGroup
       DBSubnetGroupName: !Ref DatabaseSubnetGroup
       Engine: aurora
@@ -170,3 +173,17 @@ Resources:
       DBInstanceClass: !Ref AuroraDBInstanceType
       PubliclyAccessible: false
       Engine: "aurora"
+
+Outputs:
+  JDBCAuroraConnectionString:
+    Description: JDBC connection string for the database
+    Value: !Join ['', ['jdbc:mysql://', !GetAtt [AuroraInstance, Endpoint.Address], ':', !GetAtt [
+            AuroraInstance, Endpoint.Port], /, !Ref AuroraDBName]]
+    Export:
+      Name: !Sub "${AWS::StackName}-Aurora-JDBC"
+
+  VPCId:
+    Description: Aurora VPC identifier
+    Value: !Ref VPC
+    Export:
+      Name: !Sub "${AWS::StackName}-Aurora-VPCID"
