@@ -77,14 +77,14 @@ Resources:
                   - "cloudwatch:PutMetricData"
               -
                 Effect: "Allow"
-                Resource: "arn:aws:s3:::aws-glue-*"
+                Resource: "arn:aws:s3:::bg-glue*"
                 Action:
                   - "s3:CreateBucket"
               -
                 Effect: "Allow"
                 Resource:
-                  - "arn:aws:s3:::aws-glue-*/*"
-                  - "arn:aws:s3:::*/*aws-glue-*/*"
+                  - "arn:aws:s3:::bg-glue*/*"
+                  - "arn:aws:s3:::*/*bg-glue*/*"
                 Action:
                   - "s3:GetObject"
                   - "s3:PutObject"
@@ -93,12 +93,12 @@ Resources:
                 Effect: "Allow"
                 Resource:
                   - "arn:aws:s3:::crawler-public*"
-                  - "arn:aws:s3:::aws-glue-*"
+                  - "arn:aws:s3:::bg-glue*"
                 Action:
                   - "s3:GetObject"
               -
                 Effect: "Allow"
-                Resource: "arn:aws:logs:*:*:/aws-glue/*"
+                Resource: "arn:aws:logs:*:*:/bg-glue/*"
                 Action:
                   - "logs:CreateLogGroup"
                   - "logs:CreateLogStream"
@@ -131,16 +131,13 @@ Resources:
             Fn::Select:
               - 0
               - Fn::GetAZs: ""
-          SecurityGroupIdList:
-           -
-             Fn::ImportValue:
-               Fn::Sub: "${AuroraStack}-Aurora-Private-Subnet-1"
-           -
-             Fn::ImportValue:
-               Fn::Sub: "${AuroraStack}-Aurora-Private-Subnet-2"
           SubnetId:
             Fn::ImportValue:
-              Fn::Sub: "${AuroraStack}-Aurora-Security-Group"
+              Fn::Sub: "${AuroraStack}-Aurora-Private-Subnet-1"
+          SecurityGroupIdList:
+            -
+              Fn::ImportValue:
+                Fn::Sub: "${AuroraStack}-Aurora-Security-Group"
         ConnectionProperties: {
           "JDBC_CONNECTION_URL": !Ref JDBCString,
           "USERNAME": !Ref JDBCUser,
@@ -172,76 +169,80 @@ Resources:
         - - com.amazonaws.
           - !Ref 'AWS::Region'
           - .s3
+      RouteTableIds:
+        -
+          Fn::ImportValue:
+            Fn::Sub: "${AuroraStack}-Aurora-Route-Table"
       VpcId:
         Fn::ImportValue:
           Fn::Sub: "${AuroraStack}-Aurora-VPCID"
-  Crawler:
-    Type: AWS::Glue::Crawler
-    Properties:
-      Name: !Ref CrawlerName
-      Role: !GetAtt AWSGlueServiceRole.Arn
-      #Classifiers: none, use the default classifier
-      Description: AWS Glue crawler to crawl data
-      #Schedule: none, use default run-on-demand
-      DatabaseName: !Ref CrawlerDatabaseName
-      Targets:
-        S3Targets:
-          # Public S3 bucket with the data
-          - Path: "s3://tbd"
-      TablePrefix: !Ref TablePrefixName
-      SchemaChangePolicy:
-        UpdateBehavior: "UPDATE_IN_DATABASE"
-        DeleteBehavior: "LOG"
-  CrawlerTable:
-    # Creating the table waits for the database to be created
-    DependsOn: CrawlerDatabase
-    Type: AWS::Glue::Table
-    Properties:
-      CatalogId: !Ref AWS::AccountId
-      DatabaseName: !Ref CrawlerDatabaseName
-      TableInput:
-        Name: !Ref CrawlerTableName
-        Description: Define the first few columns of the table
-        TableType: EXTERNAL_TABLE
-        Parameters: {
-          "classification": "csv"
-        }
-#       ViewExpandedText: String
-        PartitionKeys:
-        # Data is partitioned by month
-        - Name: mon
-          Type: bigint
-        StorageDescriptor:
-          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
-          Columns:
-          - Name: tbd
-            Type: tbd
-          InputFormat: org.apache.hadoop.mapred.TextInputFormat
-          Location: s3://tbd
-          SerdeInfo:
-            Parameters:
-              field.delim: ","
-            SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
-# Partition 1
-# Create an AWS Glue partition
-  CrawlerTablePartition1:
-    DependsOn: CrawlerTable
-    Type: AWS::Glue::Partition
-    Properties:
-      CatalogId: !Ref AWS::AccountId
-      DatabaseName: !Ref CrawlerDatabase
-      TableName: !Ref CrawlerTableName
-      PartitionInput:
-        Values:
-        - 1
-        StorageDescriptor:
-          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
-          Columns:
-          - Name: mon
-            Type: bigint
-          InputFormat: org.apache.hadoop.mapred.TextInputFormat
-          Location: s3://tbd
-          SerdeInfo:
-            Parameters:
-              field.delim: ","
-            SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+#   Crawler:
+#     Type: AWS::Glue::Crawler
+#     Properties:
+#       Name: !Ref CrawlerName
+#       Role: !GetAtt AWSGlueServiceRole.Arn
+#       #Classifiers: none, use the default classifier
+#       Description: AWS Glue crawler to crawl data
+#       #Schedule: none, use default run-on-demand
+#       DatabaseName: !Ref CrawlerDatabaseName
+#       Targets:
+#         S3Targets:
+#           # Public S3 bucket with the data
+#           - Path: "s3://tbd"
+#       TablePrefix: !Ref TablePrefixName
+#       SchemaChangePolicy:
+#         UpdateBehavior: "UPDATE_IN_DATABASE"
+#         DeleteBehavior: "LOG"
+#   CrawlerTable:
+#     # Creating the table waits for the database to be created
+#     DependsOn: CrawlerDatabase
+#     Type: AWS::Glue::Table
+#     Properties:
+#       CatalogId: !Ref AWS::AccountId
+#       DatabaseName: !Ref CrawlerDatabaseName
+#       TableInput:
+#         Name: !Ref CrawlerTableName
+#         Description: Define the first few columns of the table
+#         TableType: EXTERNAL_TABLE
+#         Parameters: {
+#           "classification": "csv"
+#         }
+# #       ViewExpandedText: String
+#         PartitionKeys:
+#         # Data is partitioned by month
+#         - Name: mon
+#           Type: bigint
+#         StorageDescriptor:
+#           OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+#           Columns:
+#           - Name: tbd
+#             Type: tbd
+#           InputFormat: org.apache.hadoop.mapred.TextInputFormat
+#           Location: s3://tbd
+#           SerdeInfo:
+#             Parameters:
+#               field.delim: ","
+#             SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
+# # Partition 1
+# # Create an AWS Glue partition
+#   CrawlerTablePartition1:
+#     DependsOn: CrawlerTable
+#     Type: AWS::Glue::Partition
+#     Properties:
+#       CatalogId: !Ref AWS::AccountId
+#       DatabaseName: !Ref CrawlerDatabase
+#       TableName: !Ref CrawlerTableName
+#       PartitionInput:
+#         Values:
+#         - 1
+#         StorageDescriptor:
+#           OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+#           Columns:
+#           - Name: mon
+#             Type: bigint
+#           InputFormat: org.apache.hadoop.mapred.TextInputFormat
+#           Location: s3://tbd
+#           SerdeInfo:
+#             Parameters:
+#               field.delim: ","
+#             SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe

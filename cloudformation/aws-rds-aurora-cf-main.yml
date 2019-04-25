@@ -118,6 +118,21 @@ Resources:
         Value: !Join ["-", [!Ref AuroraDBName, "private-subnet-2"]]
       - Key: Network
         Value: Private2
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: !Join ["-", [!Ref AuroraDBName, "private-rt"]]
+  PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet1
+      RouteTableId:
+        Ref: PrivateRouteTable
   AuroraSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -137,6 +152,15 @@ Resources:
         - SubnetConfig
         - VPC
         - CIDR
+  ClouderaSecGroupInsideTrafficIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: AuroraSecurityGroup
+    Properties:
+      GroupId: !Ref AuroraSecurityGroup
+      IpProtocol: tcp
+      FromPort: "0"
+      ToPort: "65535"
+      SourceSecurityGroupId: !Ref AuroraSecurityGroup
   DatabaseSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
@@ -205,3 +229,9 @@ Outputs:
     Value: !Ref AuroraSecurityGroup
     Export:
       Name: !Sub "${AWS::StackName}-Aurora-Security-Group"
+
+  PrivateRouteTable:
+    Description: Aurora private route table
+    Value: !Ref PrivateRouteTable
+    Export:
+      Name: !Sub "${AWS::StackName}-Aurora-Route-Table"
