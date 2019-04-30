@@ -15,6 +15,9 @@ Parameters:
   CrawlerDatabaseName:
     Type: String
     Description: Container for crawler metadata tables.
+  CrawlerTableName:
+    Type: String
+    Description: Crawler table name.
   TablePrefixName:
     Type: String
     Description: Table prefix name.
@@ -188,7 +191,7 @@ Resources:
       Targets:
         S3Targets:
           # Public S3 bucket with the data
-          - Path: "s3://bg-glue/input/raw"
+          - Path: s3://bg-glue/input/raw
       TablePrefix: !Ref TablePrefixName
       SchemaChangePolicy:
         UpdateBehavior: "UPDATE_IN_DATABASE"
@@ -210,21 +213,29 @@ Resources:
         Parameters: {
           "classification": "csv"
         }
-#       ViewExpandedText: String
+        # ViewExpandedText: String
         PartitionKeys:
-        # Data is partitioned by month
-        - Name: mon
+        # Data is partitioned by year
+        - Name: year
           Type: bigint
         StorageDescriptor:
           OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
           Columns:
-          - Name: tbd
-            Type: tbd
+          - Name: series_id
+            Type: string
+          - Name: seasonal
+            Type: string
+          - Name: occupation_code
+            Type: bigint
+          - Name: datatype_code
+            Type: bigint
+          - Name: sector_code
+            Type: string
           InputFormat: org.apache.hadoop.mapred.TextInputFormat
-          Location: s3://tbd
+          Location: s3://bg-glue/input/raw
           SerdeInfo:
             Parameters:
-              field.delim: ","
+              field.delim: "	"
             SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
 # Partition 1
 # Create an AWS Glue partition
@@ -241,11 +252,11 @@ Resources:
         StorageDescriptor:
           OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
           Columns:
-          - Name: mon
+          - Name: year
             Type: bigint
           InputFormat: org.apache.hadoop.mapred.TextInputFormat
-          Location: s3://tbd
+          Location: s3://bg-glue/input/raw/year=2014
           SerdeInfo:
             Parameters:
-              field.delim: ","
+              field.delim: "	"
             SerializationLibrary: org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe
