@@ -98,7 +98,7 @@ Resources:
                   - "s3:GetObject"
               -
                 Effect: "Allow"
-                Resource: "arn:aws:logs:*:*:/bg-glue/*"
+                Resource: "arn:aws:logs:*:*:/aws-glue/*"
                 Action:
                   - "logs:CreateLogGroup"
                   - "logs:CreateLogStream"
@@ -188,11 +188,14 @@ Resources:
       Targets:
         S3Targets:
           # Public S3 bucket with the data
-          - Path: "s3://tbd"
+          - Path: "s3://bg-glue/input/raw"
       TablePrefix: !Ref TablePrefixName
       SchemaChangePolicy:
         UpdateBehavior: "UPDATE_IN_DATABASE"
         DeleteBehavior: "LOG"
+      Schedule:
+        ScheduleExpression: "cron(0 22 ? * MON-FRI *)"
+
   CrawlerTable:
     # Creating the table waits for the database to be created
     DependsOn: CrawlerDatabase
