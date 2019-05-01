@@ -9,30 +9,66 @@ Parameters:
   AuroraStack:
     Type: String
     Description: Aurora stack name.
+    MaxLength: 64
+    MinLength: 1
+    NoEcho: false
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
   CrawlerName:
     Type: String
     Description: A crawler name.
+    MaxLength: 64
+    MinLength: 1
+    NoEcho: false
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
   CrawlerDatabaseName:
     Type: String
     Description: Container for crawler metadata tables.
+    MaxLength: 64
+    MinLength: 1
+    NoEcho: false
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
   CrawlerTableName:
     Type: String
     Description: Crawler table name.
+    MaxLength: 64
+    MinLength: 1
+    NoEcho: false
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
   TablePrefixName:
     Type: String
     Description: Table prefix name.
+    MaxLength: 64
+    MinLength: 1
+    NoEcho: false
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
   JDBCConnectionName:
     Type: String
     Description: JDBC connection name.
+    MaxLength: 64
+    MinLength: 1
+    NoEcho: false
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
   JDBCString:
     Type: String
     Description: JDBC connection string.
+    MaxLength: 64
+    MinLength: 1
+    NoEcho: false
+    AllowedPattern: 'jdbc:mysql:\/\/([^:\/]+)(?::([0-9]+))?\/([a-zA-Z][a-zA-Z0-9]*'
   JDBCUser:
     Type: String
     Description: JDBC user name.
+    MaxLength: 64
+    MinLength: 1
+    NoEcho: false
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
   JDBCPassword:
     Type: String
     Description: JDBC password.
+    AllowedPattern: "[a-zA-Z0-9]*"
+    ConstraintDescription: "Must contain only alphanumeric characters with minimum of 8 characters."
+    MaxLength: 41
+    MinLength: 8
     NoEcho: true
 Metadata:
   AWS::CloudFormation::Interface:
