@@ -34,7 +34,26 @@ Parameters:
     Type: String
     Description: JDBC password.
     NoEcho: true
-
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Crawler Configuration"
+        Parameters:
+          - CrawlerName
+          - CrawlerDatabaseName
+          - CrawlerTableName
+          - CrawlerTableName
+      -
+        Label:
+          default: "Aurora Database Configuration"
+        Parameters:
+          - AuroraStack
+          - JDBCConnectionName
+          - JDBCString
+          - JDBCUser
+          - JDBCPassword
 Resources:
   AWSGlueServiceRole:
     Type: AWS::IAM::Role
