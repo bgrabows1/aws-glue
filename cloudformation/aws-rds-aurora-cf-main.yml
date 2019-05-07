@@ -37,6 +37,10 @@ Parameters:
     Default: db.t2.small
     Description: Choose the DB instance class that allocates the computational, network, and memory capacity
     Type: String
+  AlertSnsTopicArn:
+    Type: String
+    Description: Enter Alert Notification SNS Topic ARN for RDS.
+    Default: arn:aws:sns:eu-west-2:000000000000:aurora
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -65,8 +69,49 @@ Mappings:
       CIDR: 172.24.0.0/24
     Private2:
       CIDR: 172.24.1.0/24
-
+Conditions:
+  ConfigureAlarms: !Not [!Equals [!Ref AlertSnsTopicArn, '']]
 Resources:
+  AlarmCpu:
+    Condition: ConfigureAlarms
+    Type: AWS::CloudWatch::Alarm
+    DependsOn:
+    - AuroraInstance
+    Properties:
+      AlarmActions:
+      - Ref: AlertSnsTopicArn
+      AlarmDescription: CPU Utilization on RDS Instance is too high
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+      - Name: DBInstanceIdentifier
+        Value:
+          Ref: AuroraInstance
+      EvaluationPeriods: '1'
+      MetricName: CPUUtilization
+      Namespace: AWS/RDS
+      Period: '300'
+      Statistic: Average
+      Threshold: '50'
+  AlarmFreeSpace:
+    Condition: ConfigureAlarms
+    Type: AWS::CloudWatch::Alarm
+    DependsOn:
+    - AuroraInstance
+    Properties:
+      AlarmActions:
+      - Ref: AlertSnsTopicArn
+      AlarmDescription: 1Gb left of storage available on RDS Instance
+      ComparisonOperator: LessThanOrEqualToThreshold
+      Dimensions:
+      - Name: DBInstanceIdentifier
+        Value:
+          Ref: AuroraInstance
+      EvaluationPeriods: '1'
+      MetricName: FreeStorageSpace
+      Namespace: AWS/RDS
+      Period: '300'
+      Statistic: Maximum
+      Threshold: '1024000000'
   VPC:
     Type: AWS::EC2::VPC
     Properties:
