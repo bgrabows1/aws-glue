@@ -54,7 +54,7 @@ Parameters:
     MaxLength: 64
     MinLength: 1
     NoEcho: false
-    AllowedPattern: 'jdbc:mysql:\/\/([^:\/]+)(?::([0-9]+))?\/([a-zA-Z][a-zA-Z0-9]*'
+    AllowedPattern: 'jdbc:mysql:\/\/([^:\/]+)(?::([0-9]+))?\/([a-zA-Z][a-zA-Z0-9])*'
   JDBCUser:
     Type: String
     Description: JDBC user name.
@@ -70,6 +70,13 @@ Parameters:
     MaxLength: 41
     MinLength: 8
     NoEcho: true
+  S3Name:
+    Type: String
+    Description: S3 bucket name.
+    AllowedPattern: "[a-zA-Z0-9]*"
+    ConstraintDescription: "Must contain only alphanumeric characters with minimum of 1 character."
+    MinLength: 1
+    NoEcho: false
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -90,6 +97,11 @@ Metadata:
           - JDBCString
           - JDBCUser
           - JDBCPassword
+      -
+        Label:
+          default: "S3 Parameters"
+        Parameters:
+          - S3Name
 Resources:
   AWSGlueServiceRole:
     Type: AWS::IAM::Role
@@ -135,14 +147,14 @@ Resources:
                   - "cloudwatch:PutMetricData"
               -
                 Effect: "Allow"
-                Resource: "arn:aws:s3:::bg-glue*"
+                Resource: "arn:aws:s3:::${S3Name}*"
                 Action:
                   - "s3:CreateBucket"
               -
                 Effect: "Allow"
                 Resource:
-                  - "arn:aws:s3:::bg-glue*/*"
-                  - "arn:aws:s3:::*/*bg-glue*/*"
+                  - "arn:aws:s3:::${S3Name}*/*"
+                  - "arn:aws:s3:::*/*${S3Name}*/*"
                 Action:
                   - "s3:GetObject"
                   - "s3:PutObject"
@@ -151,12 +163,12 @@ Resources:
                 Effect: "Allow"
                 Resource:
                   - "arn:aws:s3:::crawler-public*"
-                  - "arn:aws:s3:::bg-glue*"
+                  - "arn:aws:s3:::${S3Name}*"
                 Action:
                   - "s3:GetObject"
               -
                 Effect: "Allow"
-                Resource: "arn:aws:logs:*:*:/aws-glue/*"
+                Resource: "arn:aws:logs:*:*:/${S3Name}/*"
                 Action:
                   - "logs:CreateLogGroup"
                   - "logs:CreateLogStream"
@@ -221,7 +233,7 @@ Resources:
             Action:
               - 's3:GetObject'
             Resource:
-              - 'arn:aws:s3:::bg-glue/*'
+              - 'arn:aws:s3:::${S3Name}/*'
       ServiceName: !Join
         - ''
         - - com.amazonaws.
@@ -246,7 +258,7 @@ Resources:
       Targets:
         S3Targets:
           # Public S3 bucket with the data
-          - Path: s3://bg-glue/input/raw
+          - Path: s3://${S3Name}/input/raw
       TablePrefix: !Ref TablePrefixName
       SchemaChangePolicy:
         UpdateBehavior: "UPDATE_IN_DATABASE"
@@ -287,7 +299,7 @@ Resources:
           - Name: sector_code
             Type: string
           InputFormat: org.apache.hadoop.mapred.TextInputFormat
-          Location: s3://bg-glue/input/raw
+          Location: s3://${S3Name}/input/raw
           SerdeInfo:
             Parameters:
               field.delim: "	"
@@ -310,7 +322,7 @@ Resources:
           - Name: year
             Type: bigint
           InputFormat: org.apache.hadoop.mapred.TextInputFormat
-          Location: s3://bg-glue/input/raw/year=2014
+          Location: s3://${S3Name}/input/raw/year=2014
           SerdeInfo:
             Parameters:
               field.delim: "	"
