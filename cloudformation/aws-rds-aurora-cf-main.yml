@@ -79,7 +79,9 @@ Resources:
     - AuroraInstance
     Properties:
       AlarmActions:
-      - Ref: AlertSnsTopicArn
+        - Ref: AlertSnsTopicArn
+      InsufficientDataActions:
+        - Ref: AlertSnsTopicArn
       AlarmDescription: CPU Utilization on RDS Instance is too high
       ComparisonOperator: GreaterThanOrEqualToThreshold
       Dimensions:
@@ -99,7 +101,9 @@ Resources:
     - AuroraInstance
     Properties:
       AlarmActions:
-      - Ref: AlertSnsTopicArn
+        - Ref: AlertSnsTopicArn
+      InsufficientDataActions:
+        - Ref: AlertSnsTopicArn
       AlarmDescription: 1Gb left of storage available on RDS Instance
       ComparisonOperator: LessThanOrEqualToThreshold
       Dimensions:
