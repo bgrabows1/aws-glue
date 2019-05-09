@@ -6,44 +6,50 @@ Description: >
 Parameters:
   AuroraDBName:
     Description: Aurora database name.
+    Type: String
     MaxLength: 64
     MinLength: 1
     NoEcho: false
-    Type: String
-    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
-    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
+    AllowedPattern: "^[a-zA-Z]+[0-9a-zA-Z_]*$"
+    ConstraintDescription: Must start with a letter. Only numbers, letters, and _ accepted. max length 64 characters
   AuroraDBUsername:
-    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
-    ConstraintDescription: "Must begin with a letter and contain a minimum of 4 alphanumeric characters."
-    Default: auradmin
     Description: Enter database Admin username for Aurora.
-    MaxLength: 16
-    MinLength: 4
-    NoEcho: false
     Type: String
+    MaxLength: 16
+    MinLength: 1
+    NoEcho: false
+    Default: auraadmin
+    AllowedPattern: "^[a-zA-Z]+[0-9a-zA-Z_]*$"
+    ConstraintDescription: Must start with a letter. Only numbers, letters, and _ accepted. max length 16 characters
   AuroraDBPassword:
-    AllowedPattern: "[a-zA-Z0-9]*"
-    ConstraintDescription: "Must contain only alphanumeric characters with minimum of 8 characters."
-    Default: auradmin123
     Description: Enter password for Aurora Admin user.
+    Type: String
     MaxLength: 41
     MinLength: 8
     NoEcho: true
-    Type: String
+    Default: auradmin123
+    AllowedPattern: "[a-zA-Z0-9]*"
+    ConstraintDescription: Must contain only alphanumeric characters with minimum of 8 characters.
   AuroraDBInstanceType:
+    Description: Choose the DB instance class that allocates the computational, network, and memory capacity
+    Type: String
+    Default: db.t2.small
     AllowedValues:
       - db.t2.small
       - db.t2.medium
-    Default: db.t2.small
-    Description: Choose the DB instance class that allocates the computational, network, and memory capacity
+  DBEngineVersion:
+    Description: Select Database Engine Version
     Type: String
+    Default: aurora
+    AllowedValues:
+      - aurora
   AlertSnsTopicArn:
-    Type: String
     Description: Enter Alert Notification SNS Topic ARN for RDS.
+    Type: String
     Default: arn:aws:sns:eu-west-2:000000000000:aurora
   EmailAddress:
+    Description: The Email notification list is used to configure a SNS topic for sending cloudwatch alarm and RDS Event notifications.
     Type: String
-    Description: Email address to receive notifications from SNS.
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -56,6 +62,7 @@ Metadata:
           - AuroraDBInstanceType
           - AuroraDBUsername
           - DatabasePassword
+          - DBEngineVersion
       -
         Label:
           default: CloudWatch Configuration
@@ -83,6 +90,10 @@ Mappings:
       CIDR: 172.24.0.0/24
     Private2:
       CIDR: 172.24.1.0/24
+
+  DBFamilyMap:
+    aurora:
+      family: aurora5.6
 Conditions:
   ConfigureAlarms: !Not [!Equals [!Ref AlertSnsTopicArn, '']]
   HasEmailSubscription: !Not [!Equals [!Ref EmailAddress, '']]
@@ -244,7 +255,7 @@ Resources:
     Properties:
       Parameters:
         character_set_database: "utf32"
-      Family: aurora5.6
+      Family: !FindInMap [DBFamilyMap, !Ref DBEngineVersion, "family"]
       Description: "A parameter group for aurora db."
   AuroraCluster:
     Type: AWS::RDS::DBCluster
@@ -252,7 +263,7 @@ Resources:
       DatabaseName: !Ref AuroraDBName
       DBClusterParameterGroupName: !Ref RDSDBClusterParameterGroup
       DBSubnetGroupName: !Ref DatabaseSubnetGroup
-      Engine: aurora
+      Engine: !Ref DBEngineVersion
       MasterUserPassword: !Ref AuroraDBPassword
       MasterUsername: !Ref AuroraDBUsername
       Tags:
@@ -267,7 +278,7 @@ Resources:
       DBClusterIdentifier: !Ref AuroraCluster
       DBInstanceClass: !Ref AuroraDBInstanceType
       PubliclyAccessible: false
-      Engine: "aurora"
+      Engine: !Ref DBEngineVersion
 
 Outputs:
   JDBCAuroraConnectionString:
