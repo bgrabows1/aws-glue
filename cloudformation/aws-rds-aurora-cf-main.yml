@@ -41,17 +41,27 @@ Parameters:
     Type: String
     Description: Enter Alert Notification SNS Topic ARN for RDS.
     Default: arn:aws:sns:eu-west-2:000000000000:aurora
+  EmailAddress:
+    Type: String
+    Description: Email address to receive notifications from SNS.
 
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
-      - Label:
+      -
+        Label:
           default: Database Configuration
         Parameters:
           - AuroraDBName
           - AuroraDBInstanceType
           - AuroraDBUsername
           - DatabasePassword
+      -
+        Label:
+          default: CloudWatch Configuration
+        Parameters:
+          - AlertSnsTopicArn
+          - EmailAddress
     ParameterLabels:
       AuroraDBName:
         default: Database Cluster Name
@@ -61,6 +71,10 @@ Metadata:
         default: Database Username
       AuroraDBPassword:
         default: Database Password
+      AlertSnsTopicArn:
+        default: SNS Topic Arn
+      EmailAddress:
+        default: Email Address for SNS notifications
 Mappings:
   SubnetConfig:
     VPC:
@@ -71,6 +85,7 @@ Mappings:
       CIDR: 172.24.1.0/24
 Conditions:
   ConfigureAlarms: !Not [!Equals [!Ref AlertSnsTopicArn, '']]
+  HasEmailSubscription: !Not [!Equals [!Ref EmailAddress, '']]
 Resources:
   AlarmCpu:
     Condition: ConfigureAlarms
@@ -116,6 +131,13 @@ Resources:
       Period: '300'
       Statistic: Maximum
       Threshold: '1024000000'
+  AuroraSubscription:
+    Condition: HasEmailSubscription
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Ref EmailAddress
+      Protocol: email
+      TopicArn: !Ref AlertSnsTopicArn
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -201,7 +223,7 @@ Resources:
         - SubnetConfig
         - VPC
         - CIDR
-  ClouderaSecGroupInsideTrafficIngress:
+  AuroraSecGroupInsideTrafficIngress:
     Type: AWS::EC2::SecurityGroupIngress
     DependsOn: AuroraSecurityGroup
     Properties:
