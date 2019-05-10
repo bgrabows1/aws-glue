@@ -98,6 +98,22 @@ Conditions:
   ConfigureAlarms: !Not [!Equals [!Ref AlertSnsTopicArn, '']]
   HasEmailSubscription: !Not [!Equals [!Ref EmailAddress, '']]
 Resources:
+  MonitoringIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "monitoring.rds.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole
   AlarmCpu:
     Condition: ConfigureAlarms
     Type: AWS::CloudWatch::Alarm
@@ -279,6 +295,8 @@ Resources:
       DBInstanceClass: !Ref AuroraDBInstanceType
       PubliclyAccessible: false
       Engine: !Ref DBEngineVersion
+      MonitoringInterval: 30
+      MonitoringRoleArn: !GetAtt MonitoringIAMRole.Arn
 
 Outputs:
   JDBCAuroraConnectionString:
