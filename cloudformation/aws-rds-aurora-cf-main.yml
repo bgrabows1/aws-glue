@@ -43,6 +43,10 @@ Parameters:
     Default: aurora
     AllowedValues:
       - aurora
+  DBSnapshotName:
+    Description: Optional. DB Snapshot ID to restore database. Leave this blank if you are not restoring from a snapshot.
+    Type: String
+    Default: ""
   AlertSnsTopicArn:
     Description: Enter Alert Notification SNS Topic ARN for RDS.
     Type: String
@@ -63,6 +67,7 @@ Metadata:
           - AuroraDBUsername
           - DatabasePassword
           - DBEngineVersion
+          - DBSnapshotName
       -
         Label:
           default: CloudWatch Configuration
@@ -82,6 +87,8 @@ Metadata:
         default: SNS Topic Arn
       EmailAddress:
         default: Email Address for SNS notifications
+      DBSnapshotName:
+        default: DB Snapshot ID to restore database
 Mappings:
   SubnetConfig:
     VPC:
@@ -97,6 +104,8 @@ Mappings:
 Conditions:
   ConfigureAlarms: !Not [!Equals [!Ref AlertSnsTopicArn, '']]
   HasEmailSubscription: !Not [!Equals [!Ref EmailAddress, '']]
+  IsUseDBSnapshot: !Not [!Equals [!Ref DBSnapshotName, '']]
+  IsNotUseDBSnapshot: !Not [Condition: IsUseDBSnapshot]
 Resources:
   MonitoringIAMRole:
     Type: AWS::IAM::Role
@@ -276,21 +285,25 @@ Resources:
   AuroraCluster:
     Type: AWS::RDS::DBCluster
     Properties:
-      DatabaseName: !Ref AuroraDBName
+      DatabaseName: !If [IsUseDBSnapshot, !Ref "AWS::NoValue", !Ref AuroraDBName]
       DBClusterParameterGroupName: !Ref RDSDBClusterParameterGroup
       DBSubnetGroupName: !Ref DatabaseSubnetGroup
       Engine: !Ref DBEngineVersion
       MasterUserPassword: !Ref AuroraDBPassword
       MasterUsername: !Ref AuroraDBUsername
+      SnapshotIdentifier: !If [IsUseDBSnapshot, !Ref DBSnapshotName, !Ref "AWS::NoValue"]
+      StorageEncrypted: !If [IsUseDBSnapshot, !Ref "AWS::NoValue", true]
       Tags:
         - Key: Application
           Value: !Ref AWS::StackId
       VpcSecurityGroupIds:
         - Ref: AuroraSecurityGroup
     DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
   AuroraInstance:
     Type: AWS::RDS::DBInstance
     Properties:
+      CopyTagsToSnapshot: true
       DBClusterIdentifier: !Ref AuroraCluster
       DBInstanceClass: !Ref AuroraDBInstanceType
       PubliclyAccessible: false
