@@ -1,11 +1,18 @@
 import json
 import urllib
 import boto3
+import jaydebeapi
 
 print('Loading function')
 
 s3 = boto3.client('s3')
+cf = boto3.client('cloudformation')
 tests3 = boto3.resource(u's3')
+
+def _get_stack_outputs(stack):
+    for item in cf.describe_stacks(StackName=stack)['Stacks'][0]['Outputs']:
+        if item['OutputKey'] == 'JDBCAuroraConnectionString':
+            return item['OutputValue']
 
 def lambda_handler(event, context):
     source_bucket = event['Records'][0]['s3']['bucket']['name']

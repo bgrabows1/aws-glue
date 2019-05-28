@@ -124,6 +124,7 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
         - arn:aws:iam::aws:policy/AmazonRDSFullAccess
+        - arn:aws:iam::aws:policy/AWSCloudFormationReadOnlyAccess
   MonitoringIAMRole:
     Type: AWS::IAM::Role
     Properties:
