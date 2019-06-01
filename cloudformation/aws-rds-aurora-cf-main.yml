@@ -12,23 +12,6 @@ Parameters:
     NoEcho: false
     AllowedPattern: "^[a-zA-Z]+[0-9a-zA-Z_]*$"
     ConstraintDescription: Must start with a letter. Only numbers, letters, and _ accepted. max length 64 characters
-  AuroraDBUsername:
-    Description: Enter database Admin username for Aurora.
-    Type: String
-    MaxLength: 16
-    MinLength: 1
-    NoEcho: false
-    Default: auraadmin
-    AllowedPattern: "^[a-zA-Z]+[0-9a-zA-Z_]*$"
-    ConstraintDescription: Must start with a letter. Only numbers, letters, and _ accepted. max length 16 characters
-  AuroraDBPassword:
-    Description: Enter password for Aurora Admin user.
-    Type: String
-    MaxLength: 41
-    MinLength: 8
-    NoEcho: true
-    Default: auradmin123
-    AllowedPattern: "[a-zA-Z0-9]*"
     ConstraintDescription: Must contain only alphanumeric characters with minimum of 8 characters.
   AuroraDBInstanceType:
     Description: Choose the DB instance class that allocates the computational, network, and memory capacity
@@ -64,8 +47,6 @@ Metadata:
         Parameters:
           - AuroraDBName
           - AuroraDBInstanceType
-          - AuroraDBUsername
-          - DatabasePassword
           - DBEngineVersion
           - DBSnapshotName
       -
@@ -79,10 +60,6 @@ Metadata:
         default: Database Cluster Name
       AuroraDBInstanceType:
         dafault: Database Instance Type
-      AuroraDBUsername:
-        default: Database Username
-      AuroraDBPassword:
-        default: Database Password
       AlertSnsTopicArn:
         default: SNS Topic Arn
       EmailAddress:
@@ -107,6 +84,21 @@ Conditions:
   IsUseDBSnapshot: !Not [!Equals [!Ref DBSnapshotName, '']]
   IsNotUseDBSnapshot: !Not [Condition: IsUseDBSnapshot]
 Resources:
+  MyRDSInstanceRotationSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: 'This is the secret for RDS instance'
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "admin"}'
+        GenerateStringKey: 'password'
+        PasswordLength: 16
+        ExcludeCharacters: '"@/\'
+  SecretRDSInstanceAttachment:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref MyRDSInstanceRotationSecret
+      TargetId: !Ref AuroraCluster
+      TargetType: AWS::RDS::DBCluster
   LambdaIAMRole:
     Type: AWS::IAM::Role
     Properties:
@@ -307,8 +299,8 @@ Resources:
       DBClusterParameterGroupName: !Ref RDSDBClusterParameterGroup
       DBSubnetGroupName: !Ref DatabaseSubnetGroup
       Engine: !Ref DBEngineVersion
-      MasterUserPassword: !Ref AuroraDBPassword
-      MasterUsername: !Ref AuroraDBUsername
+      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref MyRDSInstanceRotationSecret, ':SecretString:password}}' ]]
+      MasterUsername: !Join ['', ['{{resolve:secretsmanager:', !Ref MyRDSInstanceRotationSecret, ':SecretString:username}}' ]]
       SnapshotIdentifier: !If [IsUseDBSnapshot, !Ref DBSnapshotName, !Ref "AWS::NoValue"]
       StorageEncrypted: !If [IsUseDBSnapshot, !Ref "AWS::NoValue", true]
       Tags:
