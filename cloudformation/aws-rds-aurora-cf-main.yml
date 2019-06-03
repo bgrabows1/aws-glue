@@ -329,6 +329,19 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-Aurora-JDBC"
 
+  DatabaseEndpoint:
+    Description: The database endpoint
+    Value: !GetAtt AuroraInstance.Endpoint.Address
+    Export:
+      Name: !Sub "${AWS::StackName}-Aurora-Endpoint-Address"
+
+  
+  DatabasePort:
+    Description: The database port
+    Value: !GetAtt AuroraInstance.Endpoint.Port
+    Export:
+      Name: !Sub "${AWS::StackName}-Aurora-Endpoint-Port"
+
   VPCId:
     Description: Aurora VPC identifier
     Value: !Ref VPC
