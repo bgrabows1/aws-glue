@@ -112,6 +112,18 @@ Resources:
                 - "lambda.amazonaws.com"
             Action:
               - "sts:AssumeRole"
+      Policies:
+        -
+          PolicyName: "LambdaServiceRolePolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Resource: "*"
+                Action:
+                  - "secretsmanager:DescribeSecret"
+                  - "secretsmanager:GetSecretValue"
       Path: "/"
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
@@ -335,7 +347,7 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-Aurora-Endpoint-Address"
 
-  
+
   DatabasePort:
     Description: The database port
     Value: !GetAtt AuroraInstance.Endpoint.Port
